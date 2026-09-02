@@ -2,3 +2,4 @@
 mnist.ipynb
 data/*
 requirements.txt
+export_digits.ipynb
