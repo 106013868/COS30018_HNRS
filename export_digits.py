@@ -1,27 +1,31 @@
 from tensorflow.keras.datasets import mnist
 from PIL import Image
 import os
+import numpy as np
 
-def export_mnist_images():
+def export_mnist_images(per_class=200, output_dir="data/imgs"):
     (x_train, y_train), _ = mnist.load_data()
 
-    per_class = 200
     counts = {}
 
     for i in range(len(x_train)):
-        label = y_train[i]
+
+        label = int(y_train[i])
         if counts.get(label, 0) >= per_class:
             continue
 
-        dir = f"data/imgs/{label}"
+        folder = f"{output_dir}/{label}"
         image_name = f"index_{i:05d}.png"
 
-        os.makedirs(dir, exist_ok=True)
+        os.makedirs(folder, exist_ok=True)
 
         img = Image.fromarray(x_train[i])
-        img.save(f"{dir}/{image_name}")
+        img.save(f"{folder}/{image_name}")
 
         counts[label] = counts.get(label, 0) + 1
+
+        if len(counts) == 10 and all(c >= per_class for c in counts.values()):
+            break
 
 if __name__ == "__main__":
     export_mnist_images()
