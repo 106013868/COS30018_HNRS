@@ -1,6 +1,9 @@
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.DS_Store
+.vscode/
 .env
-mnist.ipynb
 data/*
-requirements.txt
-export_digits.ipynb
-*.png
+!data/.gitkeep
+*.npz

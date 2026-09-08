@@ -4,7 +4,7 @@ from tensorflow.keras.datasets import mnist
 from tensorflow.keras.utils import to_categorical
 
 _MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
-CACHE_PATH = os.path.join(_MODULE_DIR, "data", "mnist_preprocessed.npz")
+CACHE_PATH = os.path.join(os.path.dirname(_MODULE_DIR), "data", "mnist_preprocessed.npz")
 
 
 def load_preprocessed_mnist(cache_path=CACHE_PATH, use_cache=True):
