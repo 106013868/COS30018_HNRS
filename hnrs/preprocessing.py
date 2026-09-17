@@ -3,7 +3,7 @@ import numpy as np
 from tensorflow.keras.datasets import mnist
 from tensorflow.keras.utils import to_categorical
 
-PREPROCESS_VERSION = 1
+PREPROCESS_VERSION = 1 #please update this version number if you change the preprocessing steps
 
 _MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
 CACHE_PATH = os.path.join(
