@@ -3,29 +3,32 @@ import numpy as np
 from tensorflow.keras.datasets import mnist
 from tensorflow.keras.utils import to_categorical
 
+PREPROCESS_VERSION = 1 #please update this version number if you change the preprocessing steps
+
 _MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
-CACHE_PATH = os.path.join(os.path.dirname(_MODULE_DIR), "data", "mnist_preprocessed.npz")
+CACHE_PATH = os.path.join(
+    os.path.dirname(_MODULE_DIR), "data", f"mnist_preprocessed_v{PREPROCESS_VERSION}.npz"
+)
 
 
 def load_preprocessed_mnist(cache_path=CACHE_PATH, use_cache=True):
-    
     if use_cache and os.path.exists(cache_path):
-        data = np.load(cache_path)
-        return (
-            data["x_train"], data["y_train"], data["y_cat_train"],
-            data["x_test"], data["y_test"], data["y_cat_test"],
-        )
+        with np.load(cache_path) as data:
+            return (
+                data["x_train"], data["y_train"], data["y_cat_train"],
+                data["x_test"], data["y_test"], data["y_cat_test"],
+            )
 
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
 
-    x_train = x_train / 255.0
-    x_test = x_test / 255.0
+    x_train = x_train.astype("float32") / 255.0
+    x_test = x_test.astype("float32") / 255.0
 
-    y_cat_train = to_categorical(y_train)
-    y_cat_test = to_categorical(y_test)
+    y_cat_train = to_categorical(y_train, 10)
+    y_cat_test = to_categorical(y_test, 10)
 
     os.makedirs(os.path.dirname(cache_path), exist_ok=True)
-    np.savez(
+    np.savez_compressed(
         cache_path,
         x_train=x_train, y_train=y_train, y_cat_train=y_cat_train,
         x_test=x_test, y_test=y_test, y_cat_test=y_cat_test,
