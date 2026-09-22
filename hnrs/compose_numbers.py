@@ -1,14 +1,12 @@
+import os
 import glob, random
 import numpy as np
 from PIL import Image
 
 folder = "data/imgs"
 
-bank = {}
-
-def generate_number():
-    for i in range(len(glob.glob(folder + "/*"))):
-        bank[i] = sorted(glob.glob(folder + f"/{i}/*.png"))
+def generate_number(bank):
+    
 
     digits = []
     length = random.randint(1, 4)
@@ -25,10 +23,26 @@ def generate_number():
             gap = random.randint(0, 10)
             parts.append(np.zeros((28, gap), dtype=np.uint8))
 
-    result = np.hstack(parts)
+    image = np.hstack(parts)
+    label = "".join(map(str, digits))
 
-    result_image = Image.fromarray(result)
-    result_image.save("result.png")
+    return image, label
+
+def load_digit_bank(folder):
+    bank = {}
+
+    for path in sorted(glob.glob(folder + "/*")):
+        name = os.path.basename(path)
+        if name.isdigit():
+            bank[int(name)] = sorted(glob.glob(path + "/*.png"))
+
+    if not bank or not all(bank.values()):
+        raise FileNotFoundError(f"No images found. Run export_digits.py to generate the digit images.")
+
+    return bank
 
 if __name__ == "__main__":
-    generate_number()
+    bank = load_digit_bank(folder)
+    for _ in range(5):
+        image, label = generate_number(bank)
+        print(label, image.shape)
