@@ -5,11 +5,9 @@ from PIL import Image
 
 folder = "data/imgs"
 
-def generate_number(bank):
-    
-
+def generate_number(bank, min_len=1, max_len=4, min_gap=0, max_gap=10):
     digits = []
-    length = random.randint(1, 4)
+    length = random.randint(min_len, max_len)
 
     for i in range(length):
         digits.append(random.randint(0, 9))
@@ -20,7 +18,7 @@ def generate_number(bank):
         parts.append(np.array(Image.open(random.choice(bank[digit]))))
 
         if i < len(digits) - 1:
-            gap = random.randint(0, 10)
+            gap = random.randint(min_gap, max_gap)
             parts.append(np.zeros((28, gap), dtype=np.uint8))
 
     image = np.hstack(parts)
