@@ -9,12 +9,19 @@ _ROOT = os.path.dirname(_MODULE_DIR)
 DIGITS_DIR = os.path.join(_ROOT, "data", "imgs")
 OUTPUT_DIR = os.path.join(_ROOT, "data", "generated")
 
-def generate_number(bank, min_len=1, max_len=4, min_gap=0, max_gap=10):
-    digits = []
-    length = random.randint(min_len, max_len)
+def generate_number(bank, digits=None, min_len=1, max_len=4, min_gap=0, max_gap=10):
+    if digits is None:
+        length = random.randint(min_len, max_len)
+        digits = [random.randint(0, 9) for _ in range(length)]
+    else:
+        if isinstance(digits, str):
+            if not digits.isdigit():
+                raise ValueError(f"digits must contain only 0-9, got '{digits}'")
+            digits = [int(c) for c in digits]
 
-    for i in range(length):
-        digits.append(random.randint(0, 9))
+        missing = [d for d in digits if d not in bank]
+        if missing:
+            raise ValueError(f"No images available for digit(s) {missing}")
 
     parts = []
 
