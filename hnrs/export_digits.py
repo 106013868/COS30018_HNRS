@@ -1,9 +1,12 @@
 from tensorflow.keras.datasets import mnist
 from PIL import Image
 import os
-import numpy as np
 
-def export_mnist_images(per_class=200, output_dir="data/imgs"):
+_MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
+_ROOT = os.path.dirname(_MODULE_DIR)
+DIGITS_DIR = os.path.join(_ROOT, "data", "imgs")
+
+def export_mnist_images(per_class=200, output_dir=DIGITS_DIR):
     (x_train, y_train), _ = mnist.load_data()
 
     counts = {}
