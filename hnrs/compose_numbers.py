@@ -1,8 +1,17 @@
 import csv
 import os
 import glob, random
-import numpy as np
-from PIL import Image
+import subprocess
+import sys
+import os
+from collections import Counter
+try:
+    import numpy as np
+    from PIL import Image
+except ImportError:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "numpy", "pillow"])
+    import numpy as np
+    from PIL import Image
 
 _MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
 _ROOT = os.path.dirname(_MODULE_DIR)
