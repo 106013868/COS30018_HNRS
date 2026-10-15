@@ -7,6 +7,8 @@ from hnrs.preprocessing import load_preprocessed_mnist
 _MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
 _REPO_ROOT = os.path.dirname(os.path.dirname(_MODULE_DIR))
 MODEL_PATH = os.path.join(_REPO_ROOT, "models", "lenet.keras")
+FINETUNED_PATH = os.path.join(_REPO_ROOT, "models", "lenet_swiss.keras")
+MIXED_PATH = os.path.join(_REPO_ROOT, "models", "lenet_mixed.keras")
 
 _model = None
 
@@ -36,6 +38,31 @@ def train_model(model, train_images, train_labels, epochs=5):
     model.save(MODEL_PATH)
 
     return history
+
+def fine_tune_model(train_images, train_labels, epochs=5, save_path=FINETUNED_PATH):
+    """Transfer learning: start from the MNIST-trained LeNet and adapt it to new handwriting.
+
+    The convolution layers have already learned to detect strokes and shapes,
+    so they are frozen. Only the dense layers are retrained on the new data.
+    Set save_path=None to skip saving (e.g. for quick experiments).
+    """
+    keras.utils.set_random_seed(42)
+    model = tf.keras.models.load_model(MODEL_PATH)
+
+    for layer in model.layers:
+        if isinstance(layer, tf.keras.layers.Conv2D):
+            layer.trainable = False
+
+    # Freezing layers only takes effect after compiling again
+    model.compile(optimizer='adam',
+                  loss='sparse_categorical_crossentropy',
+                  metrics=['accuracy'])
+    history = model.fit(train_images, train_labels, epochs=epochs, validation_split=0.1)
+
+    if save_path:
+        model.save(save_path)
+
+    return model, history
 
 def load_and_predict(image):
     global _model
