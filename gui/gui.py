@@ -13,7 +13,6 @@ from hnrs.preprocess_image import preprocess_image
 from hnrs.models.lenet import load_and_predict
 # Get the project folder so the model paths work when running the GUI
 
-
 # Opens the file picker and displays the selected image
 def upload_image():
     global current_image
@@ -32,7 +31,7 @@ def upload_image():
         current_image = Image.open(file_path)
 
         display_image = current_image.copy()
-        display_image.thumbnail((300, 200))
+        display_image.thumbnail((100, 100))
 
         photo = ImageTk.PhotoImage(display_image)
 
@@ -40,7 +39,7 @@ def upload_image():
         image_label.image = photo
 
         prediction_label.config(
-            text="Prediction: —\nConfidence: —"
+            text="Predicted Digit: -\nConfidence: -"
         )
 
     except Exception as e:
@@ -73,7 +72,7 @@ def predict():
         label, confidence = load_and_predict(processed_image)
 
         prediction_label.config(
-            text=f"Predicted digit: {label}\nConfidence: {confidence:.1%}"
+            text=f"Predicted Digit: {label}\nConfidence: {confidence:.1%}"
         )
 
     except Exception as e:
@@ -91,12 +90,12 @@ def clear_image():
     image_label.config(image="")
     image_label.image = None
 
-    prediction_label.config(text="Prediction: ")
+    prediction_label.config(text="Predicted Digit: -\nConfidence: -" )
 
 # Set up the main window
 root = tk.Tk()
 root.title("MNIST Digit Recognition")
-root.geometry("430x460")
+root.geometry("430x530")
 root.configure(bg="#F4F7FB")
 
 BG = "#F7F8FA"
@@ -233,7 +232,7 @@ predict_button.pack(pady=6)
 
 prediction_label = tk.Label(
     root,
-    text="Prediction: —\nConfidence: —",
+    text="Predicted Digit: -\nConfidence: -",
     font=("Arial", 11),
     bg=BG,
     fg=TEXT,
