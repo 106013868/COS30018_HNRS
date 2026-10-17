@@ -9,6 +9,7 @@ _REPO_ROOT = os.path.dirname(os.path.dirname(_MODULE_DIR))
 MODEL_PATH = os.path.join(_REPO_ROOT, "models", "lenet.keras")
 FINETUNED_PATH = os.path.join(_REPO_ROOT, "models", "lenet_swiss.keras")
 MIXED_PATH = os.path.join(_REPO_ROOT, "models", "lenet_mixed.keras")
+SYMBOLS_PATH = os.path.join(_REPO_ROOT, "models", "lenet_symbols.keras")
 
 _model = None
 
@@ -54,6 +55,35 @@ def fine_tune_model(train_images, train_labels, epochs=5, save_path=FINETUNED_PA
             layer.trainable = False
 
     # Freezing layers only takes effect after compiling again
+    model.compile(optimizer='adam',
+                  loss='sparse_categorical_crossentropy',
+                  metrics=['accuracy'])
+    history = model.fit(train_images, train_labels, epochs=epochs, validation_split=0.1)
+
+    if save_path:
+        model.save(save_path)
+
+    return model, history
+
+def fine_tune_symbol_model(train_images, train_labels, num_classes, epochs=5, save_path=SYMBOLS_PATH):
+    """
+    In: training images and labels for digits and symbols, number of classes
+    Out: model that predicts digits and arithmetic symbols, training history
+    """
+    keras.utils.set_random_seed(42)
+
+    # start from the mixed model since it already handles real handwriting
+    model = tf.keras.models.load_model(MIXED_PATH)
+
+    # freeze conv layers, strokes and curves look the same in digits and symbols
+    for layer in model.layers:
+        if isinstance(layer, tf.keras.layers.Conv2D):
+            layer.trainable = False
+
+    # swap the 10 digit output layer for one with an output per class
+    model.pop()
+    model.add(tf.keras.layers.Dense(num_classes, activation='softmax', name='symbol_output'))
+
     model.compile(optimizer='adam',
                   loss='sparse_categorical_crossentropy',
                   metrics=['accuracy'])
