@@ -15,8 +15,8 @@ CACHE_PATH = os.path.join(
     os.path.dirname(_MODULE_DIR), "data", f"mnist_preprocessed_v{PREPROCESS_VERSION}.npz"
 )
 
-SWISS_VERSION = 2
-MATH_VERSION = 1
+SWISS_VERSION = 3
+MATH_VERSION = 2
 
 # kaggle: "Handwritten Digits 0 - 9"
 # unzip it so the folders 0 to 9 sit inside data/swiss_digits/

@@ -4,7 +4,7 @@ converts a photo or drawing of a single digit into mnist format for the model
 """
 
 import numpy as np
-from PIL import Image, ImageOps
+from PIL import Image, ImageFilter, ImageOps
 from scipy import ndimage
 
 
@@ -40,10 +40,21 @@ def preprocess_image(source):
 
     arr = np.array(img, dtype=np.float32)
 
+    # small images (mnist, segmentation crops) are already clean, large ones need extra cleaning
+    is_photo = max(arr.shape) >= 100
+
     # invert if background is white, checked using median of the border pixels
     edges = np.concatenate([arr[0], arr[-1], arr[:, 0], arr[:, -1]])
     if np.median(edges) > 127:
         arr = 255 - arr
+
+    # remove uneven lighting from photos
+    # heavy blur estimates the background, subtracting it leaves the ink
+    if is_photo:
+        blur = Image.fromarray(arr.astype(np.uint8)).filter(
+            ImageFilter.GaussianBlur(radius=max(arr.shape) / 8))
+        arr = arr - np.array(blur, dtype=np.float32)
+        arr = np.clip(arr, 0, None)
 
     if arr.max() - arr.min() < 30:
         raise ValueError("No digit found in image")
@@ -60,7 +71,7 @@ def preprocess_image(source):
 
         # photos only: drop blobs touching the border unless their centre is in the middle
         # keeps digits whose tail reaches the edge, removes shadows and paper edges
-        if max(arr.shape) >= 100:
+        if is_photo:
             edge_blobs = set(np.concatenate([blobs[0], blobs[-1], blobs[:, 0], blobs[:, -1]]))
             h, w = arr.shape
             middle = []
@@ -101,8 +112,28 @@ def preprocess_image(source):
     cols = np.where(arr.any(axis=0))[0]
     arr = arr[rows[0]:rows[-1] + 1, cols[0]:cols[-1] + 1]
 
-    # fit into 20x20 box, keeping aspect ratio so a 1 stays thin
+    # resize to 100px so stroke thickness can be measured before shrinking to 20px
+    # thin pen lines would mostly disappear otherwise
     digit = Image.fromarray((arr / arr.max() * 255).astype(np.uint8))
+    digit.thumbnail((100, 100), Image.BOX)
+    if max(digit.size) < 100:
+        scale = 100 / max(digit.size)
+        digit = digit.resize((round(digit.width * scale), round(digit.height * scale)), Image.BOX)
+
+    # estimate stroke thickness as 2 * ink area / edge length
+    # a line has 2 edges so area / edges is half its width
+    ink = np.array(digit) > 127
+    edge = ink & ~ndimage.binary_erosion(ink)
+    thickness = 2 * ink.sum() / max(edge.sum(), 1)
+
+    # mnist strokes are about 10px at this size, thicken if ours are thinner
+    # MaxFilter spreads each white pixel to its neighbours
+    missing = round(10 - thickness)
+    if missing >= 2:
+        size = missing // 2 * 2 + 1  # MaxFilter needs an odd size
+        digit = digit.filter(ImageFilter.MaxFilter(size))
+
+    # fit into 20x20 box, keeping aspect ratio so a 1 stays thin
     scale = 20 / max(digit.size)
     new_w = max(1, round(digit.width * scale))
     new_h = max(1, round(digit.height * scale))
