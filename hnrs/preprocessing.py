@@ -1,10 +1,3 @@
-"""
-preprocessing.py
-loads and caches every dataset used by the project in mnist format
-mnist, swiss handwritten digits and handwritten math symbols
-run python -m hnrs.preprocessing to rebuild all caches and export the mnist digit images
-"""
-
 import os
 import glob
 import numpy as np
@@ -22,31 +15,33 @@ CACHE_PATH = os.path.join(
     os.path.dirname(_MODULE_DIR), "data", f"mnist_preprocessed_v{PREPROCESS_VERSION}.npz"
 )
 
-# swiss and math caches are built with preprocess_image
-# update these versions if preprocess_image changes so the caches rebuild
 SWISS_VERSION = 2
 MATH_VERSION = 1
 
-# kaggle: "Handwritten Digits 0 - 9" by olafkrastovski, CC0 licence
+# kaggle: "Handwritten Digits 0 - 9"
 # unzip it so the folders 0 to 9 sit inside data/swiss_digits/
 SWISS_DIR = os.path.join(_ROOT, "data", "swiss_digits")
 SWISS_CACHE_PATH = os.path.join(_ROOT, "data", f"swiss_preprocessed_v{SWISS_VERSION}.npz")
 
-# kaggle: "Handwritten Math Symbols" by sagyamthapa
+# kaggle: "Handwritten Math Symbols"
 # unzip it so the dataset folders (0 to 9, add, sub, ...) sit inside data/math_symbols/
 MATH_DIR = os.path.join(_ROOT, "data", "math_symbols")
 MATH_CACHE_PATH = os.path.join(_ROOT, "data", f"math_preprocessed_v{MATH_VERSION}.npz")
 
-# math dataset folder name -> class the model predicts
-# the label is the position in this list, so digits keep labels 0-9
+# every class any model can predict, shared by all datasets
+# a label is the position in this list, so digits are always 0-9
+# add new characters to the end, e.g. "(" and ")" once we have bracket images
+CLASSES = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-", "*", "/"]
+
+# dataset folder name -> class in CLASSES
+SWISS_FOLDERS = {str(d): str(d) for d in range(10)}
+
 # eq, dec, x, y and z folders are not needed for the brief so they are skipped
-# add "(" and ")" here once we have bracket images
 MATH_FOLDERS = {
     "0": "0", "1": "1", "2": "2", "3": "3", "4": "4",
     "5": "5", "6": "6", "7": "7", "8": "8", "9": "9",
     "add": "+", "sub": "-", "mul": "*", "div": "/",
 }
-CLASSES = list(MATH_FOLDERS.values())
 
 # mnist digit images used by compose_numbers.py
 DIGITS_DIR = os.path.join(_ROOT, "data", "imgs")
@@ -112,14 +107,15 @@ def export_mnist_images(per_class=200, output_dir=DIGITS_DIR):
 
 def load_image_folders(root, folders):
     """
-    In: dataset root folder, list of class folder names
-    Out: preprocessed images and labels, label is the folder's position in the list
+    In: dataset root folder, dict of folder name -> class in CLASSES
+    Out: preprocessed images and labels, label is the class's position in CLASSES
     """
     images = []
     labels = []
     skipped = 0
 
-    for label, folder in enumerate(folders):
+    for folder, char in folders.items():
+        label = CLASSES.index(char)
         paths = sorted(glob.glob(os.path.join(root, folder, "*.*")))
         paths = [p for p in paths if p.lower().endswith((".jpg", ".jpeg", ".png"))]
         if not paths:
@@ -181,8 +177,7 @@ def load_swiss_digits(cache_path=SWISS_CACHE_PATH, use_cache=True, test_size=0.2
     In: cache path, whether to use the cache, test split size, seed
     Out: x_train, y_train, x_test, y_test, labels are digits 0-9
     """
-    folders = [str(d) for d in range(10)]
-    return load_cached_split(cache_path, SWISS_DIR, folders, use_cache, test_size, seed)
+    return load_cached_split(cache_path, SWISS_DIR, SWISS_FOLDERS, use_cache, test_size, seed)
 
 
 def load_math_symbols(cache_path=MATH_CACHE_PATH, use_cache=True, test_size=0.2, seed=42):
@@ -190,7 +185,36 @@ def load_math_symbols(cache_path=MATH_CACHE_PATH, use_cache=True, test_size=0.2,
     In: cache path, whether to use the cache, test split size, seed
     Out: x_train, y_train, x_test, y_test, labels are positions in CLASSES
     """
-    return load_cached_split(cache_path, MATH_DIR, list(MATH_FOLDERS), use_cache, test_size, seed)
+    return load_cached_split(cache_path, MATH_DIR, MATH_FOLDERS, use_cache, test_size, seed)
+
+
+# ---- dataset registry ----
+
+def load_mnist_split():
+    """
+    returns mnist as x_train, y_train, x_test, y_test, the same format as the other datasets
+    """
+    x_train, y_train, _, x_test, y_test, _ = load_preprocessed_mnist()
+    return x_train, y_train, x_test, y_test
+
+
+# every dataset by name, used by transfer.py
+# each loader returns x_train, y_train, x_test, y_test with labels from CLASSES
+DATASETS = {
+    "mnist": load_mnist_split,
+    "swiss": load_swiss_digits,
+    "math": load_math_symbols,
+}
+
+
+def load_dataset(name):
+    """
+    In: dataset name from DATASETS
+    Out: x_train, y_train, x_test, y_test
+    """
+    if name not in DATASETS:
+        raise ValueError(f"Unknown dataset '{name}', choose from {list(DATASETS)}")
+    return DATASETS[name]()
 
 
 if __name__ == "__main__":
