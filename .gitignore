@@ -4,7 +4,17 @@ __pycache__/
 .DS_Store
 .vscode/
 .env
-data/*
-!data/.gitkeep
+
+# Python virtual environment
+.venv/
+venv/
+
+# Generated files
 *.npz
+data/result.png
+data/imgs/
+result.png
+
+# Notebook
 mnist.ipynb
+result.png
