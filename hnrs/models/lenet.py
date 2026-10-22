@@ -7,6 +7,9 @@ from hnrs.preprocessing import load_preprocessed_mnist
 _MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
 _REPO_ROOT = os.path.dirname(os.path.dirname(_MODULE_DIR))
 MODEL_PATH = os.path.join(_REPO_ROOT, "models", "lenet.keras")
+FINETUNED_PATH = os.path.join(_REPO_ROOT, "models", "lenet_swiss.keras")
+MIXED_PATH = os.path.join(_REPO_ROOT, "models", "lenet_mixed.keras")
+SYMBOLS_PATH = os.path.join(_REPO_ROOT, "models", "lenet_symbols.keras")
 
 _model = None
 

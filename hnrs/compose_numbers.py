@@ -74,7 +74,7 @@ def load_digit_bank(folder=DIGITS_DIR):
             bank[int(name)] = sorted(glob.glob(path + "/*.png"))
 
     if not bank or not all(bank.values()):
-        raise FileNotFoundError(f"No images found in {folder}. Run export_digits.py to generate the digit images.")
+        raise FileNotFoundError(f"No images found in {folder}. Run python -m hnrs.preprocessing to generate the digit images.")
 
     return bank
 
