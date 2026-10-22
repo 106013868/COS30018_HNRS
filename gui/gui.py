@@ -10,7 +10,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 from PIL import Image, ImageTk
 from hnrs.preprocess_image import preprocess_image
-from hnrs.models.lenet import load_and_predict
+from hnrs.model_loader import load_and_predict
 # Get the project folder so the model paths work when running the GUI
 
 # Opens the file picker and displays the selected image
@@ -60,16 +60,13 @@ def predict():
 
     selected_model = model_choice.get()
 
-    # Only LeNet prediction is implemented for now
-    if selected_model != "Lenet":
-        prediction_label.config(
-            text=f"{selected_model} prediction is not implemented yet."
-        )
-        return
-
     try:
         processed_image = preprocess_image(current_image)
-        label, confidence = load_and_predict(processed_image)
+
+        label, confidence = load_and_predict(
+            processed_image,
+            model_name=selected_model
+        )
 
         prediction_label.config(
             text=f"Predicted Digit: {label}\nConfidence: {confidence:.1%}"
@@ -137,7 +134,7 @@ image_label.pack(pady=10)
 
 
 # Model selection
-model_choice = tk.StringVar(value="Lenet")
+model_choice = tk.StringVar(value="LeNet")
 
 model_label = tk.Label(
     root,
@@ -153,7 +150,7 @@ model_menu = tk.OptionMenu(
     model_choice,
     "Conv2D",
     "Dense",
-    "Lenet"
+    "LeNet"
 )
 
 # Style the dropdown button
