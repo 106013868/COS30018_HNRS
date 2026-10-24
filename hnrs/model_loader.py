@@ -8,8 +8,8 @@ _REPO_ROOT = os.path.dirname(_MODULE_DIR)
 
 MODEL_PATHS = {
     "LeNet": os.path.join(_REPO_ROOT, "models", "lenet_symbols.keras"),
-    "Conv2D": os.path.join(_REPO_ROOT, "models", "conv2d.keras"),
-    "Dense": os.path.join(_REPO_ROOT, "models", "dense.keras"),
+    "Conv2D": os.path.join(_REPO_ROOT, "models", "conv2d_math.keras"),
+    "Dense": os.path.join(_REPO_ROOT, "models", "dense_math.keras"),
 }
 
 _loaded_models = {}

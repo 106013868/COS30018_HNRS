@@ -13,7 +13,7 @@ from hnrs.preprocessing import load_dataset
 
 def match_input(model, x):
     """
-    adds the channel dimension if the model expects (28, 28, 1) images, e.g. lenet
+    adds (28, 28, 1) channel dimension
     """
     if len(model.input_shape) == 4 and x.ndim == 3:
         return x[..., None]
@@ -51,13 +51,12 @@ def build_mix(names, per_class=None, seed=42):
 def fine_tune(base_path, x, y, num_classes=None, epochs=5, save_path=None, seed=42):
     """
     In: path of a trained model, training images and labels, number of output classes
-    Out: fine tuned model and training history, saved to save_path if given
+    Out: fine tuned model and training history
     """
     keras.utils.set_random_seed(seed)
     model = tf.keras.models.load_model(base_path)
 
-    # conv layers detect strokes and shapes, which carry over to new handwriting, so freeze them
-    # models without conv layers (dense) freeze their first dense layer instead
+    # freeze layers
     conv_layers = [layer for layer in model.layers if isinstance(layer, tf.keras.layers.Conv2D)]
     if conv_layers:
         for layer in conv_layers:
@@ -67,7 +66,6 @@ def fine_tune(base_path, x, y, num_classes=None, epochs=5, save_path=None, seed=
         first_dense.trainable = False
 
     # new classes (e.g. symbols) need a bigger output layer
-    # defaults to enough outputs for every label in y
     current = model.layers[-1].units
     if num_classes is None:
         num_classes = max(current, int(y.max()) + 1)
