@@ -8,13 +8,24 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BASE_DIR)
 import tkinter as tk
 from tkinter import filedialog, messagebox
-from PIL import Image, ImageTk
+from PIL import Image, ImageOps, ImageTk
 from hnrs.preprocess_image import preprocess_image
 from hnrs.model_loader import load_and_predict
 from hnrs.segmentation import split_characters
 from hnrs.arithmetic import calculate
 from hnrs.compose_numbers import load_digit_bank, generate_number
 # Get the project folder so the model paths work when running the GUI
+
+# Shows an image scaled up or down to fit the same 300x100 box, so uploads and composed numbers match
+def show_image(img):
+    img = ImageOps.exif_transpose(img)  # phone photos can be stored sideways
+    scale = min(300 / img.width, 100 / img.height)
+    size = (max(1, round(img.width * scale)), max(1, round(img.height * scale)))
+    display_image = img.resize(size, Image.NEAREST if scale > 1 else Image.LANCZOS)
+
+    photo = ImageTk.PhotoImage(display_image)
+    image_label.config(image=photo)
+    image_label.image = photo
 
 # Opens the file picker and displays the selected image
 def upload_image():
@@ -33,13 +44,7 @@ def upload_image():
     try:
         current_image = Image.open(file_path)
 
-        display_image = current_image.copy()
-        display_image.thumbnail((100, 100))
-
-        photo = ImageTk.PhotoImage(display_image)
-
-        image_label.config(image=photo)
-        image_label.image = photo
+        show_image(current_image)
 
         prediction_label.config(
             text="Predicted Digit: -\nConfidence: -"
@@ -96,15 +101,7 @@ def compose_number():
         image, label = generate_number(load_digit_bank())
         current_image = Image.fromarray(image)
 
-        # enlarge numbers for display
-        display_image = current_image.resize(
-            (current_image.width * 3, current_image.height * 3), Image.NEAREST
-        )
-        display_image.thumbnail((300, 100))
-
-        photo = ImageTk.PhotoImage(display_image)
-        image_label.config(image=photo)
-        image_label.image = photo
+        show_image(current_image)
 
     except Exception as e:
         messagebox.showerror(
