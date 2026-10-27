@@ -45,6 +45,10 @@ def generate_number(bank, digits=None, min_len=1, max_len=4, min_gap=0, max_gap=
     return image, label
 
 def load_digit_bank(folder=DIGITS_DIR):
+    # first run: export the mnist digit images if they aren't there yet
+    if not glob.glob(os.path.join(folder, "*", "*.png")):
+        from hnrs.preprocessing import export_mnist_images
+        export_mnist_images(output_dir=folder)
     bank = {}
 
     for path in sorted(glob.glob(folder + "/*")):
