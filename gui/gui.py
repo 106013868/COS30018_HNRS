@@ -13,6 +13,7 @@ from hnrs.preprocess_image import preprocess_image
 from hnrs.model_loader import load_and_predict
 from hnrs.segmentation import split_characters
 from hnrs.arithmetic import calculate
+from hnrs.compose_numbers import load_digit_bank, generate_batch, OUTPUT_DIR
 # Get the project folder so the model paths work when running the GUI
 
 # Opens the file picker and displays the selected image
@@ -87,6 +88,22 @@ def predict():
             f"Could not predict the image:\n{e}"
         )
 
+# Builds random multi-digit numbers from the digit images and saves them
+def generate_numbers():
+    try:
+        bank = load_digit_bank()
+        generate_batch(bank, 10)
+        folder = os.path.relpath(OUTPUT_DIR, BASE_DIR)
+        messagebox.showinfo(
+            "Numbers Generated",
+            f"Generated 10 random numbers to {folder}"
+        )
+    except Exception as e:
+        messagebox.showerror(
+            "Generate Error",
+            f"Could not generate numbers:\n{e}"
+        )
+
 # Removes the current image 
 def clear_image():
     global current_image
@@ -101,7 +118,7 @@ def clear_image():
 # Set up the main window
 root = tk.Tk()
 root.title("MNIST Digit Recognition")
-root.geometry("430x530")
+root.geometry("430x580")
 root.configure(bg="#F4F7FB")
 
 BG = "#F7F8FA"
@@ -194,6 +211,8 @@ model_menu.pack(pady=(0, 12), anchor="center")
 # Shared button styling
 def create_button(parent, text, command, bg, fg="white",
                   active_bg=None, border="#CBD5E1"):
+    if sys.platform == "darwin":
+        fg = TEXT
     return tk.Button(
         parent,
         text=text,
@@ -235,6 +254,13 @@ predict_button = create_button(
     WHITE, fg=TEXT, active_bg=GRAY
 )
 predict_button.pack(pady=6)
+
+# Generate button
+generate_button = create_button(
+    root, "Generate Numbers", generate_numbers,
+    WHITE, fg=TEXT, active_bg=GRAY
+)
+generate_button.pack(pady=6)
 
 prediction_label = tk.Label(
     root,
