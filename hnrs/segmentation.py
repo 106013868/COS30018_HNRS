@@ -1,34 +1,39 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+from hnrs.preprocess_image import load_image, prepare_page, crop_with_margin, tune_seg
 
 
-def segment_components(binary, min_area=30):
+def segment_components(binary, min_area=30, gray=None):
     # thicken ink so small gaps inside a digit close up
-    kernel = np.ones((3, 3), np.uint8)
-    thick = cv2.dilate(binary, kernel)
-
-
-    count, label_map, stats, centroids = cv2.connectedComponentsWithStats(thick)
+    count, label_map, stats = tune_seg(binary)
+    ink = binary if gray is None else 255 - gray
 
     num = []
-    for i in range(1, count):                 
+    for i in range(1, count):
         x, y, w, h, area = stats[i]
-        if area < min_area:                   
+        if area < min_area:
             continue
-        
+
         only_this = np.where(label_map == i, 255, 0).astype(np.uint8) #helps to separate two blobs from connecting
-        num.append((x, only_this[y:y + h, x:x + w]))
+        num.append((x, crop_with_margin(only_this, ink, (x, x + w, y, y + h))))
     #     plt.gca().add_patch(plt.Rectangle((x, y), w, h, fill=False, color="red"))
     # plt.axis("off")
     # plt.show()
 
-    num.sort(key=lambda b: b[0])       
+    num.sort(key=lambda b: b[0])
     return [crop for x, crop in num]
 
+
 def segment(img):
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    return segment_components(cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 31, 15))
+    gray = prepare_page(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY))
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+    return segment_components(cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 31, 15), gray=gray)
+
+
+def split_characters(source):
+    gray = np.array(load_image(source))
+    return segment(cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR))
 
 
 def main():
