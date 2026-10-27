@@ -3,15 +3,16 @@ preprocess_image.py
 converts a photo or drawing of a single digit into mnist format for the model
 """
 
+import cv2
 import numpy as np
 from PIL import Image, ImageFilter, ImageOps
 from scipy import ndimage
 
 
-def preprocess_image(source):
+def load_image(source):
     """
-    In: file path, PIL image or numpy array of one digit
-    Out: 28x28 float32 array scaled 0-1, white digit on black like mnist
+    In: file path, PIL image or numpy array
+    Out: greyscale PIL image, upright, with transparency on white
     """
 
     # load image from any supported input type
@@ -32,7 +33,56 @@ def preprocess_image(source):
         img = Image.alpha_composite(white, img)
 
     # greyscale, colour doesnt help recognise digits
-    img = img.convert("L")
+    return img.convert("L")
+
+
+def prepare_page(gray):
+    """
+    In: greyscale array of a whole page or photo
+    Out: same image shrunk to 800px max, dark ink on light paper
+    """
+
+    # shrink big photos so later steps suit the size of the writing
+    if max(gray.shape) > 800:
+        s = 800 / max(gray.shape)
+        gray = cv2.resize(gray, (round(gray.shape[1] * s), round(gray.shape[0] * s)), interpolation=cv2.INTER_AREA)
+
+    # same border check as preprocess_image, but flipping the other way: dark ink on light paper
+    edges = np.concatenate([gray[0], gray[-1], gray[:, 0], gray[:, -1]])
+    if np.median(edges) < 127:
+        gray = 255 - gray
+    return gray
+
+
+def crop_with_margin(mask, ink, box):
+    """
+    In: mask of one character, ink image (bright ink on black), box as x0, x1, y0, y1
+    Out: crop of the original ink with a margin, everything except this character blacked out
+    """
+
+    # preprocess_image needs background around the character
+    # without it, the border check flips the image and dots touching the edge get removed
+    rows, cols = mask.shape
+    x0, x1, y0, y1 = box
+    pad = max(2, int(0.2 * max(y1 - y0, x1 - x0)))
+    top, bottom, left, right = max(0, y0 - pad), min(rows, y1 + pad), max(0, x0 - pad), min(cols, x1 + pad)
+
+    # keep ink close to this character only
+    cross = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
+    near = cv2.dilate(mask[top:bottom, left:right], cross, iterations=2) > 0
+    crop = np.where(near, ink[top:bottom, left:right], 0).astype(np.uint8)
+
+    # pad back out where the margin ran past the image edge
+    return np.pad(crop, ((pad - (y0 - top), pad - (bottom - y1)), (pad - (x0 - left), pad - (right - x1))))
+
+
+def preprocess_image(source):
+    """
+    In: file path, PIL image or numpy array of one digit
+    Out: 28x28 float32 array scaled 0-1, white digit on black like mnist
+    """
+
+    img = load_image(source)
 
     # shrink large photos early to speed up later steps
     if max(img.size) > 512:
@@ -149,3 +199,67 @@ def preprocess_image(source):
 
     # scale to 0-1 to match training data
     return canvas / canvas.max()
+
+def tune_seg(binary):
+    rows, cols = binary.shape
+    is_photo = min(rows, cols) >= 100
+
+    def inside(pieces):
+        # photos only: drop pieces touching the image edge (paper edges, shadows), unless that's all there is
+        if not is_photo:
+            return pieces
+        kept = [p for p in pieces if p["x0"] > 0 and p["y0"] > 0 and p["x1"] < cols and p["y1"] < rows]
+        return kept or pieces
+
+    # how much to thicken: 3% of the writing height, measured on the biggest blob
+    count, label_map, stats, centroids = cv2.connectedComponentsWithStats(binary)
+    blobs = inside([{"x0": s[0], "y0": s[1], "x1": s[0] + s[2], "y1": s[1] + s[3], "area": s[4]} for s in stats[1:]])
+    gap = 1
+    if blobs:
+        big = max(blobs, key=lambda b: b["area"])
+        gap = max(1, round(0.03 * (big["y1"] - big["y0"])))
+
+    # thicken to find which ink belongs together, but measure pieces on the original ink
+    kernel = np.ones((3, 3), np.uint8)
+    thick = cv2.dilate(binary, kernel, iterations=gap)
+    count, label_map, stats, centroids = cv2.connectedComponentsWithStats(thick)
+    label_map[binary == 0] = 0
+    boxes = ndimage.find_objects(label_map, max_label=count - 1)
+    areas = ndimage.sum(label_map > 0, label_map, range(1, count))
+    pieces = [{"ids": [i], "x0": b[1].start, "x1": b[1].stop, "y0": b[0].start, "y1": b[0].stop, "area": int(a)}
+              for i, (b, a) in enumerate(zip(boxes, areas), start=1) if b is not None and a >= 3]
+
+    pieces = inside(pieces)
+
+    # keep only the line of writing, level with the biggest piece
+    if pieces:
+        big = max(pieces, key=lambda p: p["area"])
+        h = big["y1"] - big["y0"]
+        pieces = [p for p in pieces if big["y0"] - h <= (p["y0"] + p["y1"]) / 2 <= big["y1"] + h]
+
+    # pieces stacked above each other are one character, e.g. the dots and bar of a divide sign
+    joined = []
+    for p in sorted(pieces, key=lambda p: p["x0"]):
+        if joined:
+            g = joined[-1]
+            overlap = min(p["x1"], g["x1"]) - max(p["x0"], g["x0"])
+            if overlap >= 0.5 * min(p["x1"] - p["x0"], g["x1"] - g["x0"]):
+                g["ids"] += p["ids"]
+                g["x0"], g["x1"] = min(g["x0"], p["x0"]), max(g["x1"], p["x1"])
+                g["y0"], g["y1"] = min(g["y0"], p["y0"]), max(g["y1"], p["y1"])
+                g["area"] += p["area"]
+                continue
+        joined.append(dict(p, ids=list(p["ids"])))
+
+    # drop dust after joining, so the small dots of a divide sign are kept
+    if joined:
+        biggest = max(g["area"] for g in joined)
+        joined = [g for g in joined if g["area"] >= 0.02 * biggest]
+
+    # one label per character, in the same format connectedComponentsWithStats gives
+    relabel = np.zeros(count, int)
+    stats = np.zeros((len(joined) + 1, 5), int)
+    for k, g in enumerate(joined, start=1):
+        relabel[g["ids"]] = k
+        stats[k] = [g["x0"], g["y0"], g["x1"] - g["x0"], g["y1"] - g["y0"], g["area"]]
+    return len(joined) + 1, relabel[label_map], stats

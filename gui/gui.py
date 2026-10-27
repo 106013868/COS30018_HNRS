@@ -11,6 +11,8 @@ from tkinter import filedialog, messagebox
 from PIL import Image, ImageTk
 from hnrs.preprocess_image import preprocess_image
 from hnrs.model_loader import load_and_predict
+from hnrs.segmentation import split_characters
+from hnrs.arithmetic import calculate
 # Get the project folder so the model paths work when running the GUI
 
 # Opens the file picker and displays the selected image
@@ -61,15 +63,22 @@ def predict():
     selected_model = model_choice.get()
 
     try:
-        processed_image = preprocess_image(current_image)
+        characters = split_characters(current_image)
+        if not characters:
+            raise ValueError("No characters found in the image")
 
-        label, confidence = load_and_predict(
-            processed_image,
-            model_name=selected_model
-        )
+        results = [load_and_predict(preprocess_image(c), model_name=selected_model) for c in characters]
+        text = "".join(label for label, _ in results)
+        confidence = min(conf for _, conf in results)
+
+        if any(ch in "+-*/" for ch in text):
+            try:
+                text += f" = {calculate(text):g}"
+            except ValueError:
+                text += "  (can't calculate)"
 
         prediction_label.config(
-            text=f"Predicted Digit: {label}\nConfidence: {confidence:.1%}"
+            text=f"Prediction: {text}\nConfidence: {confidence:.1%}"
         )
 
     except Exception as e:
