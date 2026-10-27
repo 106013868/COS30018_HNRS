@@ -13,7 +13,7 @@ from hnrs.preprocess_image import preprocess_image
 from hnrs.model_loader import load_and_predict
 from hnrs.segmentation import split_characters
 from hnrs.arithmetic import calculate
-from hnrs.compose_numbers import load_digit_bank, generate_batch, OUTPUT_DIR
+from hnrs.compose_numbers import load_digit_bank, generate_number
 # Get the project folder so the model paths work when running the GUI
 
 # Opens the file picker and displays the selected image
@@ -88,20 +88,28 @@ def predict():
             f"Could not predict the image:\n{e}"
         )
 
-# Builds random multi-digit numbers from the digit images and saves them
-def generate_numbers():
+# Builds one random number from the digit images and loads it ready to predict
+def compose_number():
+    global current_image
+
     try:
-        bank = load_digit_bank()
-        generate_batch(bank, 10)
-        folder = os.path.relpath(OUTPUT_DIR, BASE_DIR)
-        messagebox.showinfo(
-            "Numbers Generated",
-            f"Generated 10 random numbers to {folder}"
+        image, label = generate_number(load_digit_bank())
+        current_image = Image.fromarray(image)
+
+        # enlarge numbers for display
+        display_image = current_image.resize(
+            (current_image.width * 3, current_image.height * 3), Image.NEAREST
         )
+        display_image.thumbnail((300, 100))
+
+        photo = ImageTk.PhotoImage(display_image)
+        image_label.config(image=photo)
+        image_label.image = photo
+
     except Exception as e:
         messagebox.showerror(
-            "Generate Error",
-            f"Could not generate numbers:\n{e}"
+            "Compose Error",
+            f"Could not compose a number:\n{e}"
         )
 
 # Removes the current image 
@@ -117,8 +125,8 @@ def clear_image():
 
 # Set up the main window
 root = tk.Tk()
-root.title("MNIST Digit Recognition")
-root.geometry("430x580")
+root.title("Handwritten Digit Recognition")
+root.geometry("430x530")
 root.configure(bg="#F4F7FB")
 
 BG = "#F7F8FA"
@@ -133,7 +141,7 @@ GRAY = "#CBD5E1"
 # Smaller, less prominent heading
 title_label = tk.Label(
     root,
-    text="MNIST Digit Recognition",
+    text="Handwritten Digit Recognition",
     font=("Arial", 20),
     bg=BG,
     fg=NAVY
@@ -234,12 +242,23 @@ def create_button(parent, text, command, bg, fg="white",
     )
 
 
-# Upload button
+# Upload and compose buttons, side by side
+button_row = tk.Frame(root, bg=BG)
+button_row.pack(pady=6)
+
 upload_button = create_button(
-    root, "Upload Image", upload_image,
+    button_row, "Upload", upload_image,
     BLUE, active_bg="#2563EB"
 )
-upload_button.pack(pady=6)
+upload_button.config(width=1, padx=4)
+upload_button.place(relx=0, rely=0, relwidth=0.5, relheight=1, width=-4)
+
+compose_button = create_button(
+    button_row, "Compose", compose_number,
+    WHITE, fg=TEXT, active_bg=GRAY
+)
+compose_button.config(width=1, padx=4)
+compose_button.place(relx=0.5, x=4, rely=0, relwidth=0.5, relheight=1, width=-4)
 
 # Clear button
 clear_button = create_button(
@@ -254,13 +273,6 @@ predict_button = create_button(
     WHITE, fg=TEXT, active_bg=GRAY
 )
 predict_button.pack(pady=6)
-
-# Generate button
-generate_button = create_button(
-    root, "Generate Numbers", generate_numbers,
-    WHITE, fg=TEXT, active_bg=GRAY
-)
-generate_button.pack(pady=6)
 
 prediction_label = tk.Label(
     root,
@@ -278,6 +290,9 @@ prediction_label.pack(
 )
 
 current_image = None
+
+root.update_idletasks()
+button_row.config(width=clear_button.winfo_reqwidth(), height=clear_button.winfo_reqheight())
 
 # Start the GUI
 root.mainloop()
