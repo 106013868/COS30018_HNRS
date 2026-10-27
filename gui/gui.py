@@ -11,9 +11,7 @@ from tkinter import filedialog, messagebox
 from PIL import Image, ImageTk
 from hnrs.preprocess_image import preprocess_image
 from hnrs.model_loader import load_and_predict
-import cv2
-import numpy as np
-from hnrs.segmentation import segment
+from hnrs.segmentation import split_characters
 from hnrs.arithmetic import calculate
 # Get the project folder so the model paths work when running the GUI
 
@@ -65,8 +63,7 @@ def predict():
     selected_model = model_choice.get()
 
     try:
-        bgr = cv2.cvtColor(np.array(current_image.convert("RGB")), cv2.COLOR_RGB2BGR)
-        characters = segment(bgr)
+        characters = split_characters(current_image)
         if not characters:
             raise ValueError("No characters found in the image")
 
