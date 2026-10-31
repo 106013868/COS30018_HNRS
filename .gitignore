@@ -15,6 +15,7 @@ data/result.png
 data/imgs/
 result.png
 data/*
+docs/*
 
 # Notebook
 mnist.ipynb

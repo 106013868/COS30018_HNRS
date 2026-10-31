@@ -16,22 +16,17 @@ CACHE_PATH = os.path.join(
 )
 
 SWISS_VERSION = 3
-MATH_VERSION = 2
+MATH_VERSION = 3
 
 # kaggle: "Handwritten Digits 0 - 9"
-# unzip it so the folders 0 to 9 sit inside data/swiss_digits/
 SWISS_DIR = os.path.join(_ROOT, "data", "swiss_digits")
 SWISS_CACHE_PATH = os.path.join(_ROOT, "data", f"swiss_preprocessed_v{SWISS_VERSION}.npz")
 
 # kaggle: "Handwritten Math Symbols"
-# unzip it so the dataset folders (0 to 9, add, sub, ...) sit inside data/math_symbols/
 MATH_DIR = os.path.join(_ROOT, "data", "math_symbols")
 MATH_CACHE_PATH = os.path.join(_ROOT, "data", f"math_preprocessed_v{MATH_VERSION}.npz")
 
-# every class any model can predict, shared by all datasets
-# a label is the position in this list, so digits are always 0-9
-# add new characters to the end, e.g. "(" and ")" once we have bracket images
-CLASSES = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-", "*", "/"]
+CLASSES = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-", "*", "/", "(", ")"]
 
 # dataset folder name -> class in CLASSES
 SWISS_FOLDERS = {str(d): str(d) for d in range(10)}
@@ -41,6 +36,7 @@ MATH_FOLDERS = {
     "0": "0", "1": "1", "2": "2", "3": "3", "4": "4",
     "5": "5", "6": "6", "7": "7", "8": "8", "9": "9",
     "add": "+", "sub": "-", "mul": "*", "div": "/",
+    "left_bracket": "(", "right_bracket": ")",
 }
 
 # mnist digit images used by compose_numbers.py
@@ -173,18 +169,10 @@ def load_cached_split(cache_path, root, folders, use_cache=True, test_size=0.2, 
 
 
 def load_swiss_digits(cache_path=SWISS_CACHE_PATH, use_cache=True, test_size=0.2, seed=42):
-    """
-    In: cache path, whether to use the cache, test split size, seed
-    Out: x_train, y_train, x_test, y_test, labels are digits 0-9
-    """
     return load_cached_split(cache_path, SWISS_DIR, SWISS_FOLDERS, use_cache, test_size, seed)
 
 
 def load_math_symbols(cache_path=MATH_CACHE_PATH, use_cache=True, test_size=0.2, seed=42):
-    """
-    In: cache path, whether to use the cache, test split size, seed
-    Out: x_train, y_train, x_test, y_test, labels are positions in CLASSES
-    """
     return load_cached_split(cache_path, MATH_DIR, MATH_FOLDERS, use_cache, test_size, seed)
 
 
@@ -197,15 +185,11 @@ def load_mnist_split():
     x_train, y_train, _, x_test, y_test, _ = load_preprocessed_mnist()
     return x_train, y_train, x_test, y_test
 
-
-# every dataset by name, used by transfer.py
-# each loader returns x_train, y_train, x_test, y_test with labels from CLASSES
 DATASETS = {
     "mnist": load_mnist_split,
     "swiss": load_swiss_digits,
     "math": load_math_symbols,
 }
-
 
 def load_dataset(name):
     """
