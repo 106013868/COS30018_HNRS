@@ -165,7 +165,7 @@ image_label.pack(pady=10)
 
 
 # Model selection
-model_choice = tk.StringVar(value="Conv2D")
+model_choice = tk.StringVar(value="LeNet")
 
 model_label = tk.Label(
     root,
