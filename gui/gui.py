@@ -14,7 +14,6 @@ from hnrs.model_loader import load_and_predict
 from hnrs.segmentation import split_characters
 from hnrs.arithmetic import calculate
 from hnrs.compose_numbers import load_digit_bank, generate_number
-# Get the project folder so the model paths work when running the GUI
 
 # Shows an image scaled up or down to fit the same 300x100 box, so uploads and composed numbers match
 def show_image(img):
@@ -40,12 +39,9 @@ def upload_image():
 
     if not file_path:
         return
-
     try:
         current_image = Image.open(file_path)
-
         show_image(current_image)
-
         prediction_label.config(
             text="Predicted Digit: -\nConfidence: -"
         )
@@ -56,7 +52,6 @@ def upload_image():
             f"Could not open image:\n{e}"
         )
 
-
 # Predict the digit in the uploaded image
 def predict():
     if current_image is None:
@@ -65,7 +60,6 @@ def predict():
             "Please upload an image first."
         )
         return
-
     selected_model = model_choice.get()
 
     try:
