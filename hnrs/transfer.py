@@ -5,7 +5,6 @@ build a training mix, fine tune a saved model on it, then compare models on each
 """
 
 import numpy as np
-import keras
 import tensorflow as tf
 
 from hnrs.preprocessing import load_dataset
@@ -13,7 +12,7 @@ from hnrs.preprocessing import load_dataset
 
 def match_input(model, x):
     """
-    adds (28, 28, 1) channel dimension
+    lenet expects (28, 28, 1), the conv2d and dense models take (28, 28)
     """
     if len(model.input_shape) == 4 and x.ndim == 3:
         return x[..., None]
@@ -53,7 +52,7 @@ def fine_tune(base_path, x, y, num_classes=None, epochs=5, save_path=None, seed=
     In: path of a trained model, training images and labels, number of output classes
     Out: fine tuned model and training history
     """
-    keras.utils.set_random_seed(seed)
+    tf.keras.utils.set_random_seed(seed)
     model = tf.keras.models.load_model(base_path)
 
     # freeze layers
